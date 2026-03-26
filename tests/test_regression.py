@@ -18,6 +18,7 @@ def test_pipeline_monitor_tail_log_with_data(tmp_path) -> None:
 
 def test_issue_row_key_parsing() -> None:
     """Test parsing issue number from RowKey.value - regression for click crash."""
+
     # Simulate RowKey object structure
     class MockRowKey:
         def __init__(self, value: str):
@@ -45,6 +46,7 @@ def test_issue_row_key_parsing() -> None:
 
 def test_issue_row_key_with_none() -> None:
     """Test handling None value in RowKey - regression for type checking."""
+
     class MockRowKey:
         def __init__(self, value: str | None):
             self.value = value
