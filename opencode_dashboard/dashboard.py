@@ -765,9 +765,8 @@ class DashboardApp(App):
         """Set up refresh timers."""
         self.set_interval(2, self.refresh_local)
         self.set_interval(30, self.refresh_github)
-        # Load immediately but don't block - load in background
-        self.refresh_local()
-        self.refresh_github()
+        # Don't load data on mount - let UI render immediately
+        # Data will load on first timer tick (2s for local, 30s for GitHub)
 
     def refresh_local(self) -> None:
         """Refresh local state (issues, workers, models, timesheet)."""
