@@ -2,7 +2,7 @@
 
 TUI dashboard for monitoring opencode pipelines.
 
-[![CI Status](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
+[![CI Status](https://github.com/JoshCLWren/opencode-dashboard/workflows/CI/badge.svg)](https://github.com/JoshCLWren/opencode-dashboard/actions)
 
 ## Features
 
