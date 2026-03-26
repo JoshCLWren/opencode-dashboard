@@ -12,7 +12,7 @@ from pathlib import Path
 from humanize import naturaldelta
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import DataTable, Footer, Header, Static
+from textual.widgets import DataTable, Footer, Header, ScrollableContainer, Static
 
 
 @dataclass
@@ -609,52 +609,6 @@ class LogViewer(Static):
         if not log_lines:
             return "[No recent logs yet - select an issue to view its logs]"
 
-        all_lines = "\n".join(log_lines).split("\n")
-        return "\n".join(all_lines[-lines:])
-
-    def _show_recent_logs(self) -> None:
-        """Show recent log entries across all issues."""
-        self.border_title = "RECENT LOGS   (select an issue to view its logs)"
-        self.update(self._get_recent_logs())
-
-    def _get_recent_logs(self, lines: int = 50) -> str:
-        """Get recent log entries from all worker logs.
-
-        Args:
-            lines: Number of lines to return
-
-        Returns:
-            Recent log content
-        """
-        import subprocess
-
-        log_lines: list[str] = []
-
-        try:
-            # Get all worker log files
-            worker_logs = list(self.monitor.logs_dir.glob("worker_*.log"))
-
-            for log_file in worker_logs[-5:]:  # Last 5 worker logs
-                try:
-                    # Get last 10 lines from each log
-                    result = subprocess.run(
-                        ["tail", "-n", "10", str(log_file)],
-                        capture_output=True,
-                        text=True,
-                        timeout=1,
-                    )
-                    if result.returncode == 0:
-                        log_lines.append(f"=== {log_file.name} ===")
-                        log_lines.append(result.stdout)
-                except (subprocess.TimeoutExpired, FileNotFoundError):
-                    pass
-        except OSError:
-            pass
-
-        if not log_lines:
-            return "[No recent logs yet - select an issue to view its logs]"
-
-        # Take last N lines total
         all_lines = "\n".join(log_lines).split("\n")
         return "\n".join(all_lines[-lines:])
 
