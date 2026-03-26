@@ -12,7 +12,7 @@ from pathlib import Path
 from humanize import naturaldelta
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import DataTable, Footer, Header, ScrollableContainer, Static
+from textual.widgets import DataTable, Footer, Header, RichLog, Static
 
 
 @dataclass
@@ -780,14 +780,14 @@ class DashboardApp(App):
                     workers_panel = WorkersPanel(self.monitor)
                     workers_panel.id = "workers"
                     yield workers_panel
-                with Vertical():
+                with Vertical(id="issues"):
                     issues_table = IssuesTable(self.monitor, self.pr_info)
                     issues_table.id = "issues"
                     yield issues_table
 
             log_viewer = LogViewer(self.monitor)
             log_viewer.id = "log"
-            yield log_viewer
+            yield ScrollableContainer(log_viewer)
 
             with Horizontal(id="bottom"):
                 with Container():
