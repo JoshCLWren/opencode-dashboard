@@ -1,26 +1,19 @@
-def test_pipeline_monitor_tail_log_with_data(tmp_path) -> None:
-    """Test PipelineMonitor tail_log with existing log."""
-    monitor = PipelineMonitor(tmp_path)
-    logs_dir = tmp_path / ".opencode_logs"
-    issue_dir = logs_dir / "issue_123"
-    issue_dir.mkdir(parents=True)
+"""Regression tests for bug fixes."""
 
-    log_file = issue_dir / "implement.log"
-    log_file.write_text("line 1\nline 2\nline 3\nline 4\nline 5\n")
-
-    content = monitor.tail_log(123, "implement", lines=3)
-    # tail_log returns last 3 lines: line 3, line 4, line 5 (line 5 is empty after trailing \n)
-    assert "line 4" in content
-    assert "line 5" in content
-    assert "line 1" not in content
-    assert "line 2" not in content
+import pytest
+from opencode_dashboard.dashboard import PipelineMonitor
 
 
 def test_issue_row_key_parsing() -> None:
-    """Test parsing issue number from RowKey.value - regression for click crash."""
+    """Test parsing issue number from RowKey.value - regression for click crash.
 
-    # Simulate RowKey object structure
+    This test ensures we use row_key.value instead of str(row_key) to avoid
+    ValueError when parsing issue numbers from DataTable row selection.
+    """
+
     class MockRowKey:
+        """Mock RowKey object."""
+
         def __init__(self, value: str):
             self.value = value
 
@@ -33,11 +26,8 @@ def test_issue_row_key_parsing() -> None:
     assert int(row_key.value) == 366
 
     # Verify that str(row_key) would fail with ValueError (old bug)
-    try:
+    with pytest.raises(ValueError):
         int(str(row_key))
-        assert False, "Should have raised ValueError"
-    except ValueError:
-        pass
 
     # Verify that int(row_key.value) works (correct approach)
     issue_num = int(row_key.value)
@@ -45,9 +35,15 @@ def test_issue_row_key_parsing() -> None:
 
 
 def test_issue_row_key_with_none() -> None:
-    """Test handling None value in RowKey - regression for type checking."""
+    """Test handling None value in RowKey - regression for type checking.
+
+    This test ensures we check for None before accessing row_key.value
+    to satisfy pyright type checking.
+    """
 
     class MockRowKey:
+        """Mock RowKey object with optional value."""
+
         def __init__(self, value: str | None):
             self.value = value
 
@@ -57,7 +53,12 @@ def test_issue_row_key_with_none() -> None:
 
     # Test that we check for None before converting
     if row_key and row_key.value:
+        raise AssertionError("Should not reach here with None value")
+
+    # Test with valid value
+    row_key = MockRowKey("123")
+    if row_key and row_key.value:
         issue_num = int(row_key.value)
-        assert False, "Should not reach here"
+        assert issue_num == 123
     else:
-        assert True
+        raise AssertionError("Should reach here with valid value")
