@@ -428,6 +428,9 @@ class WorkersPanel(Static):
 
         self.update("\n".join(lines))
 
+    # query "issues" could not be resolved
+    # ^^^
+
 
 class IssuesTable(DataTable):
     """Table showing issues."""
@@ -444,6 +447,7 @@ class IssuesTable(DataTable):
         self.pr_info = pr_info
         self.cursor_type = "row"
         self.zebra_stripes = True
+        self.show_cursor = True
 
     def on_mount(self) -> None:
         """Set up table columns."""
@@ -451,7 +455,10 @@ class IssuesTable(DataTable):
         self.add_column("State", width=14)
         self.add_column("Model", width=20)
         self.add_column("Age", width=8)
-        self.add_column("Status", width=10)
+        self.add_column("Status", width=15)
+
+        # Add placeholder row when empty
+        self.add_row("—", "Loading...", "—", "—", "—")
 
     def update_content(self) -> None:
         """Refresh table data."""
@@ -463,6 +470,11 @@ class IssuesTable(DataTable):
             key=lambda i: i.last_updated,
             reverse=True,
         )
+
+        if not sorted_issues:
+            self.add_row("—", "No issues found", "—", "—", "")
+            self.border_subtitle = "done: 0  pending: 0  in_progress: 0"
+            return
 
         for issue in sorted_issues:
             age_str = naturaldelta(issue.age_seconds) if issue.age_seconds > 0 else "0s"
