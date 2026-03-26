@@ -80,7 +80,7 @@ class TimesheetEntry:
 
 
 class TimesheetReader:
-    """Efficient reader for timesheet.jsonl with cursor-based pagination."""
+    """Efficient reader for timesheet.jsonl that only reads last N entries."""
 
     def __init__(self, timesheet_path: Path) -> None:
         """Initialize reader.
@@ -89,11 +89,9 @@ class TimesheetReader:
             timesheet_path: Path to timesheet.jsonl file
         """
         self.timesheet_path = timesheet_path
-        self._cursor_pos: int | None = None
-        self._file_size: int | None = None
 
     def read_last_n(self, n: int) -> list[TimesheetEntry]:
-        """Read last N entries efficiently using reverse line reading.
+        """Read last N entries by reading file and taking last N lines.
 
         Args:
             n: Number of entries to read
@@ -107,53 +105,36 @@ class TimesheetReader:
             return entries
 
         try:
-            # Read backwards from end of file
-            with self.timesheet_path.open("rb") as f:
-                f.seek(0, 2)
-                file_size = f.tell()
+            # Read all lines and take last N
+            with self.timesheet_path.open("r") as f:
+                lines = f.readlines()
 
-                # Start from end and read in chunks
-                pos = file_size
-                chunk_size = 4096
-                buffer = b""
+            # Take last N lines
+            last_n_lines = lines[-n:] if len(lines) > n else lines
 
-                while pos > 0 and len(entries) < n:
-                    read_size = min(chunk_size, pos)
-                    pos -= read_size
-                    f.seek(pos)
-                    chunk = f.read(read_size)
-                    buffer = chunk + buffer
-
-                # Skip first partial line if we're not at start of file
-                if pos > 0:
-                    newline_idx = buffer.find(b"\n")
-                    if newline_idx != -1:
-                        buffer = buffer[newline_idx + 1 :]
-
-                # Decode and parse lines
-                for line in buffer.split(b"\n"):
-                    if not line.strip():
-                        continue
-                    try:
-                        data = json.loads(line.decode())
-                        entry = TimesheetEntry(
-                            ts=data.get("ts", ""),
-                            issue=data.get("issue", 0),
-                            role=data.get("role", ""),
-                            model=data.get("model", ""),
-                            duration_s=data.get("duration_s", 0),
-                            outcome=data.get("outcome", ""),
-                        )
-                        entries.append(entry)
-                    except (json.JSONDecodeError, KeyError):
-                        continue
+            # Parse each line
+            for line in last_n_lines:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    entry = TimesheetEntry(
+                        ts=data.get("ts", ""),
+                        issue=data.get("issue", 0),
+                        role=data.get("role", ""),
+                        model=data.get("model", ""),
+                        duration_s=data.get("duration_s", 0),
+                        outcome=data.get("outcome", ""),
+                    )
+                    entries.append(entry)
+                except (json.JSONDecodeError, KeyError):
+                    continue
 
         except (OSError, json.JSONDecodeError):
             pass
 
-        # Take last N entries (most recent) and reverse for chronological order
-        entries = entries[-n:]
-        return list(reversed(entries))
+        return entries
 
 
 @dataclass
