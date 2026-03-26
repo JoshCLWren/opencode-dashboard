@@ -832,9 +832,11 @@ class DashboardApp(App):
         workers = self.query_one("#workers", WorkersPanel)
         workers.update_content()
 
-        issues = self.query_one("#issues", IssuesTable)
-        issues.pr_info = self.pr_info
-        issues.update_content()
+        issues = self.query_one("#issues")
+        issues_table = issues.query_one(IssuesTable)
+        if issues_table:
+            issues_table.pr_info = self.pr_info
+            issues_table.update_content()
 
         log_viewer = self.query_one("#log", LogViewer)
         log_viewer.update_content()
