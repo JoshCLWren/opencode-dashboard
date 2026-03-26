@@ -76,7 +76,7 @@ def test_timesheet_reader_efficiency_on_large_file(tmp_path) -> None:
     # Create a file with 1000 entries
     for i in range(1000):
         entry = {
-            "ts": f"2026-03-25T12:{i:02d}:00Z",
+            "ts": f"2026-03-25T{i:04d}:00:00Z",
             "issue": 1000 + i,
             "role": "implement",
             "model": "gpt-4",
