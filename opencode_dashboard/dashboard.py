@@ -769,7 +769,7 @@ class DashboardApp(App):
         """
         if event.data_table.id == "issues":
             issue_key = event.row_key
-            if issue_key:
+            if issue_key and issue_key.value:
                 issue_num = int(issue_key.value)
                 log_viewer = self.query_one("#log", LogViewer)
                 log_viewer.set_issue(issue_num)
