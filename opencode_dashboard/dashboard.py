@@ -821,11 +821,12 @@ class DashboardApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Set up refresh timers."""
+        """Set up refresh timers and load initial data."""
         self.set_interval(2, self.refresh_local)
         self.set_interval(30, self.refresh_github)
-        # Don't load data on mount - let UI render immediately
-        # Data will load on first timer tick (2s for local, 30s for GitHub)
+        # Load data immediately on mount for instant UX
+        self.refresh_local()
+        self.refresh_github()
 
     def refresh_local(self) -> None:
         """Refresh local state (issues, workers, models, timesheet)."""
