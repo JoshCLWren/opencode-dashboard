@@ -241,10 +241,20 @@ class PipelineMonitor:
             return entries
 
         try:
-            with timesheet_path.open() as f:
+            # Read only the last N lines to avoid loading huge files
+            # Approximate line length is ~150 chars, read last limit*200 chars
+            read_size = limit * 200
+            with timesheet_path.open("rb") as f:
+                # Seek to end minus read_size
+                f.seek(0, 2)  # Seek to end
+                file_size = f.tell()
+                f.seek(max(0, file_size - read_size))
+                # Skip first partial line
+                f.readline()
+                # Read remaining lines
                 for line in f:
                     try:
-                        data = json.loads(line.strip())
+                        data = json.loads(line.decode().strip())
                         entries.append(
                             TimesheetEntry(
                                 ts=data.get("ts", ""),
@@ -731,8 +741,9 @@ class DashboardApp(App):
         """Set up refresh timers."""
         self.set_interval(2, self.refresh_local)
         self.set_interval(30, self.refresh_github)
-        self.refresh_local()
-        self.refresh_github()
+        # Don't block UI on mount - let it load first, then refresh
+        self.call_later(0.1, self.refresh_local)
+        self.call_later(0.2, self.refresh_github)
 
     def refresh_local(self) -> None:
         """Refresh local state (issues, workers, models, timesheet)."""
