@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opencode-dashboard"
+version = "0.1.0"
+description = "TUI dashboard for monitoring opencode pipelines"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [{ name = "Josh Wren" }]
+dependencies = [
+    "textual>=0.80.0",
+    "humanize>=4.0.0",
+]
+
+[project.scripts]
+opencode-dashboard = "opencode_dashboard:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["opencode_dashboard"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "pyright>=1.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--cov=opencode_dashboard",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=96",
+]
+
+[tool.coverage.run]
+source = ["opencode_dashboard"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "D"]
+ignore = ["D203", "D213", "E501", "ANN401"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+include = ["opencode_dashboard", "tests"]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+venvPath = "."
+venv = ".venv"
