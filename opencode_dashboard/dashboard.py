@@ -504,8 +504,8 @@ class IssuesTable(DataTable):
         self.border_subtitle = f"done: {done}  pending: {pending}  in_progress: {in_progress}"
 
 
-class LogViewer(Static):
-    """Viewer for issue logs."""
+class LogViewer(RichLog):
+    """Viewer for issue logs with scrolling support."""
 
     def __init__(self, monitor: PipelineMonitor) -> None:
         """Initialize log viewer.
@@ -513,7 +513,7 @@ class LogViewer(Static):
         Args:
             monitor: Pipeline monitor instance
         """
-        super().__init__()
+        super().__init__(wrap=True, markup=True)
         self.monitor = monitor
         self.current_issue: int | None = None
         self.current_log = "implement"
@@ -567,12 +567,17 @@ class LogViewer(Static):
             f"SELECTED ISSUE LOG   (#{self.current_issue} {self.current_log}.log — live tail)"
         )
         content = self.monitor.tail_log(self.current_issue, self.current_log)
-        self.update(content)
+
+        # Clear and write new content
+        self.clear()
+        self.write(content)
 
     def _show_recent_logs(self) -> None:
         """Show recent log entries across all issues."""
         self.border_title = "RECENT LOGS   (select an issue to view its logs)"
-        self.update(self._get_recent_logs())
+        content = self._get_recent_logs()
+        self.clear()
+        self.write(content)
 
     def _get_recent_logs(self, lines: int = 50) -> str:
         """Get recent log entries from all worker logs.
@@ -599,7 +604,7 @@ class LogViewer(Static):
                         timeout=1,
                     )
                     if result.returncode == 0:
-                        log_lines.append(f"=== {log_file.name} ===")
+                        log_lines.append(f"[bold]=== {log_file.name} ===[/bold]")
                         log_lines.append(result.stdout)
                 except (subprocess.TimeoutExpired, FileNotFoundError):
                     pass
@@ -787,7 +792,7 @@ class DashboardApp(App):
 
             log_viewer = LogViewer(self.monitor)
             log_viewer.id = "log"
-            yield ScrollableContainer(log_viewer)
+            yield log_viewer
 
             with Horizontal(id="bottom"):
                 with Container():
