@@ -73,7 +73,7 @@ def test_timesheet_reader_efficiency_on_large_file(tmp_path) -> None:
     """Test TimesheetReader is reasonably fast even on large files."""
     timesheet = tmp_path / "timesheet.jsonl"
 
-    # Create a file with 1000 entries
+    # Create a file with 1000 entries (issues 1000-1999)
     for i in range(1000):
         entry = {
             "ts": f"2026-03-25T{i:04d}:00:00Z",
@@ -98,9 +98,9 @@ def test_timesheet_reader_efficiency_on_large_file(tmp_path) -> None:
     # Should be reasonably fast (< 1 second) even for 1000-line file
     assert elapsed < 1.0
     assert len(entries) == 10
-    # Should get last 10 entries (990-999)
-    assert entries[0].issue == 990
-    assert entries[9].issue == 999
+    # Should get last 10 entries (1990-1999)
+    assert entries[0].issue == 1990
+    assert entries[9].issue == 1999
 
 
 def test_timesheet_reader_empty_lines(tmp_path) -> None:
