@@ -38,7 +38,8 @@ def test_timesheet_reader_read_last_n(tmp_path) -> None:
             "duration_s": 60,
             "outcome": "success",
         }
-        timesheet.write_text(json.dumps(entry) + "\n", append_text=True)
+        with timesheet.open("a") as f:
+            f.write(json.dumps(entry) + "\n")
 
     reader = TimesheetReader(timesheet)
     entries = reader.read_last_n(5)
@@ -82,7 +83,8 @@ def test_timesheet_reader_efficiency_on_large_file(tmp_path) -> None:
             "duration_s": 60,
             "outcome": "success",
         }
-        timesheet.write_text(json.dumps(entry) + "\n", append_text=True)
+        with timesheet.open("a") as f:
+            f.write(json.dumps(entry) + "\n")
 
     reader = TimesheetReader(timesheet)
 
