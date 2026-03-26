@@ -526,7 +526,7 @@ class LogViewer(Static):
             issue_num: Issue number or None
         """
         self.current_issue = issue_num
-        self.refresh()
+        self.update_content()
 
     def cycle_log(self) -> None:
         """Cycle to next log type."""
@@ -539,9 +539,9 @@ class LogViewer(Static):
 
         idx = self.log_types.index(self.current_log)
         self.current_log = self.log_types[(idx + 1) % len(self.log_types)]
-        self.refresh()
+        self.update_content()
 
-    def refresh(self) -> None:
+    def update_content(self) -> None:
         """Refresh log content."""
         if self.current_issue is None:
             self._show_recent_logs()
@@ -568,6 +568,49 @@ class LogViewer(Static):
         )
         content = self.monitor.tail_log(self.current_issue, self.current_log)
         self.update(content)
+
+    def _show_recent_logs(self) -> None:
+        """Show recent log entries across all issues."""
+        self.border_title = "RECENT LOGS   (select an issue to view its logs)"
+        self.update(self._get_recent_logs())
+
+    def _get_recent_logs(self, lines: int = 50) -> str:
+        """Get recent log entries from all worker logs.
+
+        Args:
+            lines: Number of lines to return
+
+        Returns:
+            Recent log content
+        """
+        import subprocess
+
+        log_lines: list[str] = []
+
+        try:
+            worker_logs = list(self.monitor.logs_dir.glob("worker_*.log"))
+
+            for log_file in worker_logs[-5:]:
+                try:
+                    result = subprocess.run(
+                        ["tail", "-n", "10", str(log_file)],
+                        capture_output=True,
+                        text=True,
+                        timeout=1,
+                    )
+                    if result.returncode == 0:
+                        log_lines.append(f"=== {log_file.name} ===")
+                        log_lines.append(result.stdout)
+                except (subprocess.TimeoutExpired, FileNotFoundError):
+                    pass
+        except OSError:
+            pass
+
+        if not log_lines:
+            return "[No recent logs yet - select an issue to view its logs]"
+
+        all_lines = "\n".join(log_lines).split("\n")
+        return "\n".join(all_lines[-lines:])
 
     def _show_recent_logs(self) -> None:
         """Show recent log entries across all issues."""
