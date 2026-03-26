@@ -1,7 +1,6 @@
 """Regression tests for bug fixes."""
 
 import pytest
-from opencode_dashboard.dashboard import PipelineMonitor
 
 
 def test_issue_row_key_parsing() -> None:

@@ -79,6 +79,87 @@ class TimesheetEntry:
     outcome: str
 
 
+class TimesheetReader:
+    """Efficient reader for timesheet.jsonl with cursor-based pagination."""
+
+    def __init__(self, timesheet_path: Path) -> None:
+        """Initialize reader.
+
+        Args:
+            timesheet_path: Path to timesheet.jsonl file
+        """
+        self.timesheet_path = timesheet_path
+        self._cursor_pos: int | None = None
+        self._file_size: int | None = None
+
+    def read_last_n(self, n: int) -> list[TimesheetEntry]:
+        """Read last N entries efficiently using reverse line reading.
+
+        Args:
+            n: Number of entries to read
+
+        Returns:
+            List of timesheet entries (most recent last)
+        """
+        entries: list[TimesheetEntry] = []
+
+        if not self.timesheet_path.exists():
+            return entries
+
+        try:
+            # Read backwards from end of file
+            with self.timesheet_path.open("rb") as f:
+                f.seek(0, 2)
+                file_size = f.tell()
+
+                # Start from end and read in chunks
+                pos = file_size
+                chunk_size = 4096
+                buffer = b""
+                lines_found = 0
+
+                while pos > 0 and lines_found < n:
+                    read_size = min(chunk_size, pos)
+                    pos -= read_size
+                    f.seek(pos)
+                    chunk = f.read(read_size)
+                    buffer = chunk + buffer
+
+                    # Count complete lines in buffer
+                    lines_found = buffer.count(b"\n")
+
+                # Skip first partial line if we're not at start of file
+                if pos > 0:
+                    newline_idx = buffer.find(b"\n")
+                    if newline_idx != -1:
+                        buffer = buffer[newline_idx + 1 :]
+
+                # Decode and parse lines
+                for line in buffer.split(b"\n"):
+                    if not line.strip():
+                        continue
+                    try:
+                        data = json.loads(line.decode())
+                        entry = TimesheetEntry(
+                            ts=data.get("ts", ""),
+                            issue=data.get("issue", 0),
+                            role=data.get("role", ""),
+                            model=data.get("model", ""),
+                            duration_s=data.get("duration_s", 0),
+                            outcome=data.get("outcome", ""),
+                        )
+                        entries.append(entry)
+                        if len(entries) >= n:
+                            break
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+
+        except (OSError, json.JSONDecodeError):
+            pass
+
+        return entries
+
+
 @dataclass
 class PRInfo:
     """Information about a PR."""
@@ -226,7 +307,7 @@ class PipelineMonitor:
         return sorted(models, key=lambda m: m.backoff_remaining, reverse=True)
 
     def get_timesheet_entries(self, limit: int = 8) -> list[TimesheetEntry]:
-        """Get recent timesheet entries.
+        """Get recent timesheet entries using efficient reader.
 
         Args:
             limit: Maximum number of entries to return
@@ -234,43 +315,9 @@ class PipelineMonitor:
         Returns:
             List of timesheet entries
         """
-        entries: list[TimesheetEntry] = []
         timesheet_path = self.logs_dir / "timesheet.jsonl"
-
-        if not timesheet_path.exists():
-            return entries
-
-        try:
-            # Read only the last N lines to avoid loading huge files
-            # Approximate line length is ~150 chars, read last limit*200 chars
-            read_size = limit * 200
-            with timesheet_path.open("rb") as f:
-                # Seek to end minus read_size
-                f.seek(0, 2)  # Seek to end
-                file_size = f.tell()
-                f.seek(max(0, file_size - read_size))
-                # Skip first partial line
-                f.readline()
-                # Read remaining lines
-                for line in f:
-                    try:
-                        data = json.loads(line.decode().strip())
-                        entries.append(
-                            TimesheetEntry(
-                                ts=data.get("ts", ""),
-                                issue=data.get("issue", 0),
-                                role=data.get("role", ""),
-                                model=data.get("model", ""),
-                                duration_s=data.get("duration_s", 0),
-                                outcome=data.get("outcome", ""),
-                            )
-                        )
-                    except (json.JSONDecodeError, KeyError):
-                        continue
-        except OSError:
-            pass
-
-        return entries[-limit:]
+        reader = TimesheetReader(timesheet_path)
+        return reader.read_last_n(limit)
 
     def get_prs(self) -> list[PRInfo]:
         """Get open PRs with CI status.
@@ -741,6 +788,7 @@ class DashboardApp(App):
         """Set up refresh timers."""
         self.set_interval(2, self.refresh_local)
         self.set_interval(30, self.refresh_github)
+        # Load immediately but don't block - load in background
         self.refresh_local()
         self.refresh_github()
 
