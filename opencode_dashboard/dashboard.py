@@ -116,17 +116,13 @@ class TimesheetReader:
                 pos = file_size
                 chunk_size = 4096
                 buffer = b""
-                lines_found = 0
 
-                while pos > 0 and lines_found < n:
+                while pos > 0 and len(entries) < n:
                     read_size = min(chunk_size, pos)
                     pos -= read_size
                     f.seek(pos)
                     chunk = f.read(read_size)
                     buffer = chunk + buffer
-
-                    # Count complete lines in buffer
-                    lines_found = buffer.count(b"\n")
 
                 # Skip first partial line if we're not at start of file
                 if pos > 0:
@@ -149,15 +145,14 @@ class TimesheetReader:
                             outcome=data.get("outcome", ""),
                         )
                         entries.append(entry)
-                        if len(entries) >= n:
-                            break
                     except (json.JSONDecodeError, KeyError):
                         continue
 
         except (OSError, json.JSONDecodeError):
             pass
 
-        # Reverse to get chronological order (oldest first, most recent last)
+        # Take last N entries (most recent) and reverse for chronological order
+        entries = entries[-n:]
         return list(reversed(entries))
 
 
