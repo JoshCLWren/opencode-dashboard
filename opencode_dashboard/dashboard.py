@@ -852,9 +852,11 @@ class DashboardApp(App):
         prs = self.monitor.get_prs()
         self.pr_info = {pr.issue_number: pr for pr in prs if pr.issue_number}
 
-        issues = self.query_one("#issues", IssuesTable)
-        issues.pr_info = self.pr_info
-        issues.update_content()
+        issues = self.query_one("#issues")
+        issues_table = issues.query_one(IssuesTable)
+        if issues_table:
+            issues_table.pr_info = self.pr_info
+            issues_table.update_content()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in issues table.
