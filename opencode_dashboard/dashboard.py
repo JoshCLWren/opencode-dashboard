@@ -157,7 +157,8 @@ class TimesheetReader:
         except (OSError, json.JSONDecodeError):
             pass
 
-        return entries
+        # Reverse to get chronological order (oldest first, most recent last)
+        return list(reversed(entries))
 
 
 @dataclass
