@@ -541,16 +541,15 @@ class LogViewer(Static):
         self.current_log = self.log_types[(idx + 1) % len(self.log_types)]
         self.refresh()
 
-    def update_content(self) -> None:
+    def refresh(self) -> None:
         """Refresh log content."""
         if self.current_issue is None:
-            self.border_title = "SELECTED ISSUE LOG"
-            self.update("")
+            self._show_recent_logs()
             return
 
         issue = self.monitor.get_issues().get(self.current_issue)
         if issue is None:
-            self.update("")
+            self._show_recent_logs()
             return
 
         state_to_log = {
@@ -569,6 +568,52 @@ class LogViewer(Static):
         )
         content = self.monitor.tail_log(self.current_issue, self.current_log)
         self.update(content)
+
+    def _show_recent_logs(self) -> None:
+        """Show recent log entries across all issues."""
+        self.border_title = "RECENT LOGS   (select an issue to view its logs)"
+        self.update(self._get_recent_logs())
+
+    def _get_recent_logs(self, lines: int = 50) -> str:
+        """Get recent log entries from all worker logs.
+
+        Args:
+            lines: Number of lines to return
+
+        Returns:
+            Recent log content
+        """
+        import subprocess
+
+        log_lines: list[str] = []
+
+        try:
+            # Get all worker log files
+            worker_logs = list(self.monitor.logs_dir.glob("worker_*.log"))
+
+            for log_file in worker_logs[-5:]:  # Last 5 worker logs
+                try:
+                    # Get last 10 lines from each log
+                    result = subprocess.run(
+                        ["tail", "-n", "10", str(log_file)],
+                        capture_output=True,
+                        text=True,
+                        timeout=1,
+                    )
+                    if result.returncode == 0:
+                        log_lines.append(f"=== {log_file.name} ===")
+                        log_lines.append(result.stdout)
+                except (subprocess.TimeoutExpired, FileNotFoundError):
+                    pass
+        except OSError:
+            pass
+
+        if not log_lines:
+            return "[No recent logs yet - select an issue to view its logs]"
+
+        # Take last N lines total
+        all_lines = "\n".join(log_lines).split("\n")
+        return "\n".join(all_lines[-lines:])
 
 
 class ModelHealthTable(DataTable):
